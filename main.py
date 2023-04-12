@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 import random
 import PySimpleGUI as sg
 
+# Custom dark-pink theme
+
 sg.LOOK_AND_FEEL_TABLE['MyCreatedTheme'] = {'BACKGROUND': '#202124',
                                         'TEXT': '#fafafa',
                                         'INPUT': '#3c4042',
@@ -16,21 +18,28 @@ sg.LOOK_AND_FEEL_TABLE['MyCreatedTheme'] = {'BACKGROUND': '#202124',
 sg.theme("MyCreatedTheme")
 sg.set_options(font = "Lato 14")
 
+# Title
 titlebar = [[sg.Column([[sg.Text('A4T H3', grab=True, font="Lato 11")]], pad=(0, 0)),
              sg.Column([[sg.Text(sg.SYMBOL_X, enable_events=True, key='-X-', font="Lato 11")]],  # '❎'
                     element_justification='r', grab=True, pad=(0, 0), expand_x=True)],
             [sg.HorizontalSeparator()]
             ]
-# image_col = sg.Column([[sg.Image("Images/skull.png", key = "-IMAGE-")]])
+
+# Left column
 image_col = sg.Column([[sg.Image("Images/skull.png", key = "-IMAGE-")],
                        [sg.Image("Images/skull.png", key = "-IMAGE2-")]],scrollable=True,  vertical_scroll_only=True, pad = (0,0), expand_y = True
                       )
 
+# Right column
 image_col2 = sg.Column([
                        [sg.Image("Images/skull.png", key = "-IMAGE3-")]],scrollable=True,  vertical_scroll_only=True, pad = (0,0), expand_y = True
                       )
 
-control_col = sg.Column([[sg.Slider(range=(0, 255), default_value=154, expand_x=True, enable_events=True, orientation='horizontal', key='-SL-')]],
+# Column with control panel
+control_col = sg.Column([
+                        [sg.Slider(range=(0, 255), default_value=154, expand_x=True, enable_events=True, orientation='horizontal', key='-SL-')],
+                        [sg.Slider(range=(1, 100), default_value=50, expand_x=True, enable_events=True, orientation='horizontal', key='-SL2-')],
+],
 )
 
 layout = [
@@ -51,37 +60,46 @@ WIN = sg.Window("W/E",
                 )
 WIN.bind("<Escape>", "-ESCAPE-")
 
-def make_new_img(thresh):
+"""
+This function is responsible for analyzing image, takes threshold and cont_values that are used in analyzing image
+Those values are taken from slider in a main loop.
+
+"""
+def make_new_img(thresh, cont_value):
     img = cv.imread("Images/skull.png")
     blank = np.zeros((img.shape[1], img.shape[0],3), dtype="uint8")
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     ret, threshold = cv.threshold(gray, thresh, 255, cv.THRESH_BINARY)
-    print("made new")
     contours , hierarchy = cv.findContours(threshold, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+
     for contour in contours:
-        approx = cv.approxPolyDP(contour, 0.01* cv.arcLength(contour, True), True)
-        cv.drawContours(img, [approx], 0, (0, 0, 0), 5)
-        cv.drawContours(blank, [approx], 0, (0, 0, 255), 5)
+        approx = cv.approxPolyDP(contour, cont_value * 1/5000 * cv.arcLength(contour, True), True)
+
         x = approx.ravel()[0]
         y = approx.ravel()[1] - 5
         if len(approx) == 3:
-            cv.putText( img, "Triangle", (x, y), cv.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 0) )
+            # cv.putText( img, "Triangle", (x, y), cv.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 0) )
+            pass
         elif len(approx) == 4 :
             x, y , w, h = cv.boundingRect(approx)
             aspectRatio = float(w)/h
             print(aspectRatio)
             if aspectRatio >= 0.95 and aspectRatio < 1.05:
-                cv.putText(img, "square", (x, y), cv.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 0))
-
+                # cv.putText(img, "square", (x, y), cv.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 0))
+                pass
             else:
-                cv.putText(img, "rectangle", (x, y), cv.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 0))
-
+                # cv.putText(img, "rectangle", (x, y), cv.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 0))
+                pass
         elif len(approx) == 5 :
-            cv.putText(img, "pentagon", (x, y), cv.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 0))
+            # cv.putText(img, "pentagon", (x, y), cv.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 0))
+            pass
         elif len(approx) == 10 :
-            cv.putText(img, "star", (x, y), cv.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 0))
+            # cv.putText(img, "star", (x, y), cv.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 0))
+            pass
         else:
             cv.putText(img, "circle", (x, y), cv.FONT_HERSHEY_COMPLEX, 0.5, (255, 0, 255))
+            cv.drawContours(img, [approx], 0, (0, 0, 0), 5)
+            cv.drawContours(blank, [approx], 0, (255, 0, 255), 5)
     imgbytes = cv.imencode(".png", threshold)[1].tobytes()
     WIN["-IMAGE2-"].update(data = imgbytes)
     imgbytes = cv.imencode(".png", img)[1].tobytes()
@@ -89,13 +107,11 @@ def make_new_img(thresh):
     imgbytes = cv.imencode(".png", blank)[1].tobytes()
     WIN["-IMAGE3-"].update(data = imgbytes)
 
+# Main loop
 while True:
     event, values = WIN.read()
-    make_new_img(values["-SL-"])
+    make_new_img(values["-SL-"], values["-SL2-"])
     if event in (sg.WIN_CLOSED, "-ESCAPE-", "-X-"):
         break    
-
-
-
 WIN.close()
 
